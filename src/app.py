@@ -15,28 +15,56 @@ CORS(app)
 # create the jackson family object
 jackson_family = FamilyStructure("Jackson")
 
-# Handle/serialize errors like a JSON object
-@app.errorhandler(APIException)
-def handle_invalid_usage(error):
-    return jsonify(error.to_dict()), error.status_code
-
-# generate sitemap with all your endpoints
-@app.route('/')
-def sitemap():
-    return generate_sitemap(app)
-
 @app.route('/members', methods=['GET'])
-def handle_hello():
-
-    # this is how you can use the Family datastructure by calling its methods
+def handle_get_all_members():
     members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
-    }
+    if members:
+        return jsonify(members), 200
+    else:
+        return jsonify({"error": "No members found"}), 404
 
+@app.route('/member/<int:id>', methods=['GET'])
+def handle_get_member(id):
+    member = jackson_family.get_member(id)
 
-    return jsonify(response_body), 200
+    if member:
+        response_member = {
+            "first_name": member.get("first_name", ''),
+            "id": member.get("id", ''),
+            "age": member.get("age", ''),
+            "lucky_numbers": member.get("lucky_numbers", [])
+        }
+        return jsonify(response_member), 200
+    else:
+        return jsonify({"error": "Member not found"}), 404
+
+@app.route('/member', methods=['POST'])
+def handle_add_member():
+    member = request.get_json()
+
+    if member:
+        return jsonify(jackson_family.add_member(member)), 200    
+    else:
+        return jsonify({"error": "Could not add member"}), 404
+
+@app.route('/member/<int:id>', methods=['PUT'])
+def handle_update_member(id):
+    member = request.get_json()
+    updated_member = jackson_family.update_member(id, member)
+
+    if member:    
+        return jsonify(updated_member), 200
+    else:
+        return jsonify({"error": "Could not update member"}), 404
+
+@app.route('/member/<int:id>', methods=['DELETE'])
+def handle_delete_member(id):
+    deleted_member = jackson_family.delete_member(id)
+    if deleted_member:
+        return jsonify({"done": True, "deleted_member": deleted_member}), 200
+    else:
+        return jsonify({"error": "Member not found"}), 404
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
